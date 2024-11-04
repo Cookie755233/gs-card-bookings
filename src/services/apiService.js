@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-// Replace these with your actual values
-// https://docs.google.com/spreadsheets/d/1r0rSKgeAs-ohx6HJV8Efpyt2CSTHKSrnPkH18h8x1nQ/edit?gid=1207072783#gid=1207072783&fvid=339316176
-const SHEET_ID = '1r0rSKgeAs-ohx6HJV8Efpyt2CSTHKSrnPkH18h8x1nQ';
-const API_KEY = 'AIzaSyA7PExfaEGwEEeHJdWv1sTsL3PLdHy__e8';
-const RANGE = '公務車預約使用表!A5:H'; // Updated range to include column H
+const SHEET_ID = process.env.VITE_GOOGLE_SHEET_ID;
+const API_KEY = process.env.VITE_GOOGLE_API_KEY;
+const RANGE = '公務車預約使用表!A5:H';
 
 const SHEETS_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values`;
 
