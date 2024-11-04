@@ -22,74 +22,11 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
-
-// Car color mapping based on carPlate with lower opacity colors
-const carColors = {
-  'BJK-0596': '#b4ddf333',
-  'RFC-3623': '#b4ddf333',
-  'RDJ-0550': '#b4ddf333',
-  'RFJ-0812': '#b4ddf333',
-  'BCL-7376': '#ffc2e266',
-  'RBH-9726': '#ffc2e266',
-  'BJH-9755': '#ffe09b66',
-  'BNJ-0027': '#cce9b7',
-  'RDQ-2200': '#e4c9eedd',
-  'REA-2063': '#00674433',
-  'RFH-2963': '#ffc9c399',
-  'RFJ-2180': '#ffc9c399',
-};
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#007AFF',
-    },
-    background: {
-      default: 'linear-gradient(145deg, #F2F2F7 0%, #E8ECF4 100%)',
-      paper: '#FFFFFF',
-    },
-  },
-  typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    h4: {
-      fontWeight: 700,
-      fontSize: { xs: '24px', sm: '32px' },
-      background: 'linear-gradient(45deg, #007AFF, #5856D6)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      letterSpacing: '-0.5px',
-    },
-    h6: {
-      fontWeight: 600,
-      fontSize: { xs: '16px', sm: '18px' },
-    },
-    body1: {
-      fontSize: { xs: '15px', sm: '17px' },
-    },
-    body2: {
-      fontSize: { xs: '13px', sm: '15px' },
-    },
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: { xs: '12px', sm: '16px' },
-          maxWidth: '100%',
-          margin: '0 auto',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
-      },
-    },
-  },
-});
+import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
+import Badge from '@mui/material/Badge';
+import { theme, carColors } from './theme/theme';
+import { FloatingSection } from './components/FloatingSection';
+import { CarBookingCalendar } from './components/CarBookingCalendar';
 
 const formatDate = (date) => {
   return new Intl.DateTimeFormat('en-US', {
@@ -99,35 +36,6 @@ const formatDate = (date) => {
     day: 'numeric'
   }).format(date);
 };
-
-const FloatingSection = ({ children, isScrolled }) => (
-  <Paper
-    sx={{
-      position: 'sticky',
-      top: { xs: 8, sm: 16 },
-      zIndex: 2,
-      p: { xs: 2, sm: 3 },
-      borderRadius: { xs: '16px', sm: '20px' },
-      backgroundColor: 'rgba(255, 255, 255, 0.85)',
-      backdropFilter: 'blur(12px)',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-      border: '1px solid rgba(255, 255, 255, 0.5)',
-      mb: 3,
-      transition: 'all 0.3s ease',
-      height: isScrolled ? '80px' : 'auto',
-      overflow: isScrolled ? 'hidden' : 'visible',
-      '& .hideWhenScrolled': {
-        opacity: isScrolled ? 0 : 1,
-        visibility: isScrolled ? 'hidden' : 'visible',
-        transition: 'all 0.3s ease',
-        height: isScrolled ? 0 : 'auto',
-        overflow: 'hidden',
-      },
-    }}
-  >
-    {children}
-  </Paper>
-);
 
 function App() {
   console.log('App component rendering');
@@ -140,6 +48,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [selectedCar, setSelectedCar] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -280,6 +189,48 @@ function App() {
     });
   };
 
+  const handleCarClick = (carPlate) => {
+    setSelectedCar(carPlate);
+  };
+
+  const availableCarsSection = (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+      {availableCars.map(carPlate => (
+        <Paper
+          key={carPlate}
+          onClick={() => handleCarClick(carPlate)}
+          sx={{
+            p: 1,
+            bgcolor: carColors[carPlate] || '#F5F5F5',
+            borderRadius: 1,
+            minWidth: '90px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'transform 0.2s',
+            '&:hover': {
+              transform: 'scale(1.05)',
+            },
+          }}
+        >
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              letterSpacing: '0.5px'
+            }}
+          >
+            {carPlate}
+          </Typography>
+        </Paper>
+      ))}
+      {availableCars.length === 0 && (
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          No cars available on this date
+        </Typography>
+      )}
+    </Box>
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
@@ -291,7 +242,40 @@ function App() {
           }}
         >
           <Stack spacing={{ xs: 2, sm: 3 }}>
-            <FloatingSection isScrolled={isScrolled}>
+            <FloatingSection 
+              isScrolled={isScrolled}
+              calendar={
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    open={isCalendarOpen}
+                    onClose={() => setIsCalendarOpen(false)}
+                    value={selectedDate}
+                    onChange={(newValue) => {
+                      setSelectedDate(newValue);
+                      setIsCalendarOpen(false);
+                    }}
+                    PopperProps={{
+                      anchorEl: document.getElementById('date-select-button'),
+                      placement: "bottom-start",
+                    }}
+                    slotProps={{
+                      textField: {
+                        sx: { display: 'none' }
+                      },
+                      popper: {
+                        sx: {
+                          zIndex: 1400,
+                          '& .MuiPaper-root': {
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                            borderRadius: 2,
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              }
+            >
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -375,35 +359,7 @@ function App() {
                         </Typography>
                       </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
-                      {availableCars.map(carPlate => (
-                        <Paper
-                          key={carPlate}
-                          sx={{
-                            p: 1,
-                            bgcolor: carColors[carPlate] || '#F5F5F5',
-                            borderRadius: 1,
-                            minWidth: '90px',
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            {carPlate}
-                          </Typography>
-                        </Paper>
-                      ))}
-                      {availableCars.length === 0 && (
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          No cars available on this date
-                        </Typography>
-                      )}
-                    </Box>
+                    {availableCarsSection}
                   </Box>
                 )}
               </Box>
@@ -504,8 +460,8 @@ function App() {
                                 left: { xs: 12, sm: 16 },
                                 top: '50%',
                                 transform: 'translateY(-50%)',
-                                width: { xs: 28, sm: 36 },
-                                height: { xs: 28, sm: 36 },
+                                width: { xs: 32, sm: 40 },
+                                height: { xs: 32, sm: 40 },
                                 borderRadius: '50%',
                                 bgcolor: 'white',
                                 display: 'flex',
@@ -528,11 +484,11 @@ function App() {
                               {booking.rentID}
                             </Box>
 
-                            <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
+                            <CardContent sx={{ py: { xs: 2, sm: 2 } }}>
                               <Box sx={{ 
                                 display: 'flex', 
                                 justifyContent: 'space-between',
-                                alignItems: 'flex-start',
+                                alignItems: 'center',
                                 ml: { xs: 0.5, sm: 1 }
                               }}>
                                 <Box>
@@ -540,7 +496,7 @@ function App() {
                                     variant="h5" 
                                     sx={{ 
                                       fontWeight: 'bold',
-                                      fontSize: { xs: '0.9rem', sm: '1.5rem' },
+                                      fontSize: { xs: '0.85rem', sm: '0.85rem' },
                                       mb: 1,
                                       lineHeight: { xs: 1.3, sm: 1.5 }
                                     }}
@@ -551,7 +507,7 @@ function App() {
                                     variant="body1" 
                                     sx={{ 
                                       color: 'text.secondary',
-                                      fontSize: { xs: '0.9rem', sm: '1.1rem' }
+                                      fontSize: { xs: '0.8rem', sm: '0.8rem' }
                                     }}
                                   >
                                     {booking.carPlate}
@@ -601,6 +557,13 @@ function App() {
           </Stack>
         </Container>
       </Box>
+      {selectedCar && (
+        <CarBookingCalendar
+          carPlate={selectedCar}
+          bookings={bookings}
+          onClose={() => setSelectedCar(null)}
+        />
+      )}
     </ThemeProvider>
   );
 }
