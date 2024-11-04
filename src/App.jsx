@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Box, 
   Card, 
@@ -25,8 +26,6 @@ import { format } from 'date-fns';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import Badge from '@mui/material/Badge';
 import { theme, carColors } from './theme/theme';
-import { FloatingSection } from './components/FloatingSection';
-import { CarBookingCalendar } from './components/CarBookingCalendar';
 
 const formatDate = (date) => {
   return new Intl.DateTimeFormat('en-US', {
@@ -36,6 +35,139 @@ const formatDate = (date) => {
     day: 'numeric'
   }).format(date);
 };
+
+const FloatingSection = lazy(() => import('./components/FloatingSection'));
+const CarBookingCalendar = lazy(() => import('./components/CarBookingCalendar'));
+
+const BookingCard = memo(({ booking, expandedId, handleCardClick, isExpired, carColors, theme }) => (
+  <Card 
+    data-booking-card
+    key={booking.id}
+    sx={{ 
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      '&:hover': { 
+        transform: { xs: 'none', sm: 'translateY(-4px) scale(1.02)' },
+        boxShadow: '0 12px 40px rgba(0,0,0,0.12)'
+      },
+      bgcolor: isExpired(booking.returnDate) 
+        ? '#eeeeee'
+        : carColors[booking.carPlate] || '#FFFFFF',
+      width: '100%',
+      maxWidth: 'none',
+      mx: 'auto',
+      position: 'relative',
+      pl: { xs: 4.5, sm: 6, md: 8 },
+      ml: { xs: 2, sm: 4, md: 5 },
+      borderRadius: '16px',
+      overflow: 'hidden',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '4px',
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.8))',
+        opacity: 0.5,
+      },
+    }}
+    onClick={() => handleCardClick(booking.rentID)}
+  >
+    <Box
+      sx={{
+        position: 'absolute',
+        left: { xs: 12, sm: 16 },
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: { xs: 32, sm: 40 },
+        height: { xs: 32, sm: 40 },
+        borderRadius: '50%',
+        bgcolor: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        border: '2px solid',
+        borderColor: isExpired(booking.returnDate) 
+          ? '#bdbdbd'
+          : carColors[booking.carPlate]?.replace('22', '44') || '#e0e0e0',
+        color: isExpired(booking.returnDate)
+          ? '#9e9e9e'
+          : '#757575',
+        fontWeight: 'bold',
+        fontSize: { xs: '0.75rem', sm: '0.85rem' },
+        fontFamily: theme.typography.fontFamily,
+        zIndex: 1,
+      }}
+    >
+      {booking.rentID}
+    </Box>
+
+    <CardContent sx={{ py: { xs: 2, sm: 2 } }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        ml: { xs: 0.5, sm: 1 }
+      }}>
+        <Box>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 'bold',
+              fontSize: { xs: '0.85rem', sm: '0.85rem' },
+              mb: 1,
+              lineHeight: { xs: 1.3, sm: 1.5 }
+            }}
+          >
+            {`${booking.rentDate}~${booking.returnDate}`}
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: { xs: '0.8rem', sm: '0.8rem' }
+            }}
+          >
+            {booking.carPlate}
+            {booking.carLocation && ` (${booking.carLocation})`}
+          </Typography>
+        </Box>
+        <IconButton 
+          sx={{ 
+            transform: expandedId === booking.rentID ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s'
+          }}
+        >
+          <ExpandMoreIcon />
+        </IconButton>
+      </Box>
+
+      <Fade in={expandedId === booking.rentID}>
+        <Box sx={{ 
+          mt: 2, 
+          pt: 2, 
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          display: expandedId === booking.rentID ? 'block' : 'none'
+        }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>預約者姓名:</strong> {booking.person}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>預計出差地點:</strong> {booking.destination}
+          </Typography>
+          {booking.info && (
+            <Typography variant="body2">
+              <strong>備注:</strong> {booking.info}
+            </Typography>
+          )}
+        </Box>
+      </Fade>
+    </CardContent>
+  </Card>
+));
 
 function App() {
   console.log('App component rendering');
@@ -49,59 +181,30 @@ function App() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
+  const [allBookings, setAllBookings] = useState([]);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  useEffect(() => {
-    calculateAvailableCars();
-  }, [bookings]);
-
-  useEffect(() => {
-    calculateAvailableCars();
-  }, [selectedDate, bookings, hideExpired]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const calculateAvailableCars = () => {
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    
-    // Get all unique car plates
-    const allCarPlates = Object.keys(carColors);
-    
-    // Find busy cars on selected date
-    const busyCarPlates = bookings
-      .filter(booking => {
-        // Check if selected date falls within the booking range (inclusive)
-        const rentDate = new Date(booking.rentDate);
-        const returnDate = new Date(booking.returnDate);
-        const checkDate = new Date(dateStr);
-        
-        // Set all times to midnight for proper comparison
-        rentDate.setHours(0, 0, 0, 0);
-        returnDate.setHours(0, 0, 0, 0);
-        checkDate.setHours(0, 0, 0, 0);
-        
-        return checkDate >= rentDate && checkDate <= returnDate;
-      })
-      .map(booking => booking.carPlate);
-    
-    setAvailableCars(allCarPlates.filter(car => !busyCarPlates.includes(car)));
-  };
-
+  // Update fetchBookings to store all bookings
   const fetchBookings = async () => {
     try {
       setLoading(true);
       const data = await apiService.getAllBookings();
-      setBookings(data);
+      setAllBookings(data); // Store all bookings
+      
+      // Only filter for initial display if hideExpired is true
+      if (hideExpired) {
+        const compareDate = new Date(selectedDate);
+        compareDate.setHours(0, 0, 0, 0);
+        
+        const filteredData = data.filter(booking => {
+          const returnDate = new Date(booking.returnDate);
+          returnDate.setHours(0, 0, 0, 0);
+          return returnDate >= compareDate;
+        });
+        
+        setBookings(filteredData);
+      } else {
+        setBookings(data);
+      }
     } catch (err) {
       setError('Failed to fetch bookings');
       console.error(err);
@@ -109,6 +212,117 @@ function App() {
       setLoading(false);
     }
   };
+
+  // Update the effect to handle hideExpired changes
+  useEffect(() => {
+    if (hideExpired) {
+      const compareDate = new Date(selectedDate);
+      compareDate.setHours(0, 0, 0, 0);
+      
+      const filteredData = allBookings.filter(booking => {
+        const returnDate = new Date(booking.returnDate);
+        returnDate.setHours(0, 0, 0, 0);
+        return returnDate >= compareDate;
+      });
+      
+      setBookings(filteredData);
+    } else {
+      setBookings(allBookings);
+    }
+  }, [hideExpired, allBookings, selectedDate]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchBookings();
+  }, []); // Only fetch once on mount
+
+  const calculateAvailableCars = useCallback(() => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const allCarPlates = Object.keys(carColors);
+    const checkDate = new Date(dateStr);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const busyCarPlates = new Set(
+      bookings
+        .filter(booking => {
+          const rentDate = new Date(booking.rentDate);
+          const returnDate = new Date(booking.returnDate);
+          rentDate.setHours(0, 0, 0, 0);
+          returnDate.setHours(0, 0, 0, 0);
+          return checkDate >= rentDate && checkDate <= returnDate;
+        })
+        .map(booking => booking.carPlate)
+    );
+    
+    setAvailableCars(allCarPlates.filter(car => !busyCarPlates.has(car)));
+  }, [selectedDate, bookings, carColors]);
+
+  useEffect(() => {
+    calculateAvailableCars();
+  }, [selectedDate, bookings]);
+
+  // Optimize scroll event listener
+  useEffect(() => {
+    let ticking = false;
+    let timeout;
+    
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 100);
+          ticking = false;
+        });
+        ticking = true;
+      }
+      
+      // Clear the existing timeout
+      if (timeout) clearTimeout(timeout);
+      
+      // Set a new timeout to snap after scrolling stops
+      timeout = setTimeout(() => {
+        const cards = document.querySelectorAll('[data-booking-card]');
+        let closestCard = null;
+        let minDistance = Infinity;
+        
+        cards.forEach(card => {
+          const rect = card.getBoundingClientRect();
+          const distance = Math.abs(rect.top);
+          
+          // Find the card closest to the top of the viewport
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestCard = card;
+          }
+        });
+        
+        if (closestCard) {
+          closestCard.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        }
+      }, 100); // Adjust this delay as needed
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (timeout) clearTimeout(timeout);
+    };
+  }, []);
+
+  // Memoize grouped bookings
+  const groupedBookings = useMemo(() => {
+    const grouped = {};
+    bookings.forEach(booking => {
+      const rentDate = booking.rentDate;
+      if (!grouped[rentDate]) {
+        grouped[rentDate] = [];
+      }
+      grouped[rentDate].push(booking);
+    });
+    return Object.entries(grouped).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+  }, [bookings]);
 
   const handleAddBooking = async (newBooking) => {
     try {
@@ -143,21 +357,6 @@ function App() {
     setExpandedId(expandedId === rentID ? null : rentID);
   };
 
-  const filterBookings = (bookings) => {
-    const compareDate = new Date(selectedDate);
-    compareDate.setHours(0, 0, 0, 0);
-    
-    return bookings.filter(booking => {
-      const returnDate = new Date(booking.returnDate);
-      returnDate.setHours(0, 0, 0, 0);
-      
-      if (hideExpired) {
-        return returnDate >= compareDate;
-      }
-      return true;
-    });
-  };
-
   const isExpired = (returnDate) => {
     const compareDate = new Date(selectedDate);
     compareDate.setHours(0, 0, 0, 0);
@@ -166,18 +365,6 @@ function App() {
     bookingReturnDate.setHours(0, 0, 0, 0);
     
     return bookingReturnDate < compareDate;
-  };
-
-  const groupBookingsByDate = (bookings) => {
-    const grouped = {};
-    bookings.forEach(booking => {
-      const rentDate = booking.rentDate;
-      if (!grouped[rentDate]) {
-        grouped[rentDate] = [];
-      }
-      grouped[rentDate].push(booking);
-    });
-    return Object.entries(grouped).sort((a, b) => new Date(a[0]) - new Date(b[0]));
   };
 
   const getBookingsForDate = (date) => {
@@ -190,7 +377,8 @@ function App() {
   };
 
   const handleCarClick = (carPlate) => {
-    setSelectedCar(carPlate);
+    setSelectedCar(null);
+    setTimeout(() => setSelectedCar(carPlate), 0);
   };
 
   const availableCarsSection = (
@@ -242,327 +430,186 @@ function App() {
           }}
         >
           <Stack spacing={{ xs: 2, sm: 3 }}>
-            <FloatingSection 
-              isScrolled={isScrolled}
-              calendar={
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    open={isCalendarOpen}
-                    onClose={() => setIsCalendarOpen(false)}
-                    value={selectedDate}
-                    onChange={(newValue) => {
-                      setSelectedDate(newValue);
-                      setIsCalendarOpen(false);
-                    }}
-                    PopperProps={{
-                      anchorEl: document.getElementById('date-select-button'),
-                      placement: "bottom-start",
-                    }}
-                    slotProps={{
-                      textField: {
-                        sx: { display: 'none' }
-                      },
-                      popper: {
-                        sx: {
-                          zIndex: 1400,
-                          '& .MuiPaper-root': {
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                            borderRadius: 2,
+            <Suspense fallback={null}>
+              <FloatingSection 
+                isScrolled={isScrolled}
+                calendar={
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      open={isCalendarOpen}
+                      onClose={() => setIsCalendarOpen(false)}
+                      value={selectedDate}
+                      onChange={(newValue) => {
+                        setSelectedDate(newValue);
+                        setIsCalendarOpen(false);
+                      }}
+                      PopperProps={{
+                        anchorEl: document.getElementById('date-select-button'),
+                        placement: "bottom-start",
+                      }}
+                      slotProps={{
+                        textField: {
+                          sx: { display: 'none' }
+                        },
+                        popper: {
+                          sx: {
+                            zIndex: 1400,
+                            '& .MuiPaper-root': {
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                              borderRadius: 2,
+                            }
                           }
                         }
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              }
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                mb: isScrolled ? 0 : 3
-              }}>
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    color: 'text.primary',
-                    transition: 'all 0.2s ease',
-                    fontSize: { xs: '20px', sm: '24px' },
-                  }}
-                >
-                  WECC Car Bookings
-                </Typography>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={hideExpired}
-                      onChange={(e) => setHideExpired(e.target.checked)}
-                      size="small"
+                      }}
                     />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Hide Expired
-                    </Typography>
-                  }
-                  sx={{ m: 0 }}
-                />
-              </Box>
+                  </LocalizationProvider>
+                }
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: isScrolled ? 0 : 3
+                }}>
+                  <Typography 
+                    variant="h4" 
+                    sx={{ 
+                      color: 'text.primary',
+                      transition: 'all 0.2s ease',
+                      fontSize: { xs: '20px', sm: '24px' },
+                    }}
+                  >
+                    WECC Car Bookings
+                  </Typography>
 
-              <Box className="hideWhenScrolled">
-                {availableCars.length >= 0 && (
-                  <Box>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start',
-                      mb: 1
-                    }}>
-                      <Box sx={{ position: 'relative' }}>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            fontWeight: 'bold',
-                            fontSize: '1.1rem',
-                          }}
-                        >
-                          Available on {' '}
-                          <Button
-                            id="date-select-button"
-                            onClick={() => setIsCalendarOpen(true)}
-                            variant="contained"
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={hideExpired}
+                        onChange={(e) => setHideExpired(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Hide Expired
+                      </Typography>
+                    }
+                    sx={{ m: 0 }}
+                  />
+                </Box>
+
+                <Box className="hideWhenScrolled">
+                  {availableCars.length >= 0 && (
+                    <Box>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start',
+                        mb: 1
+                      }}>
+                        <Box sx={{ position: 'relative' }}>
+                          <Typography
+                            variant="h6"
                             sx={{
-                              textTransform: 'none',
-                              bgcolor: 'rgba(0,0,0,0.04)',
-                              color: 'text.primary',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                              minWidth: 'auto',
-                              px: 2,
-                              py: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(0,0,0,0.08)',
-                                boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
-                              },
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              fontWeight: 'bold',
+                              fontSize: '1.1rem',
                             }}
                           >
-                            {format(selectedDate, 'MMM d') === format(new Date(), 'MMM d') 
-                              ? 'Today'
-                              : format(selectedDate, 'MMM d')}
-                          </Button>
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, ml: 1 }}>
-                          {formatDate(selectedDate)}
-                        </Typography>
+                            Available on {' '}
+                            <Button
+                              id="date-select-button"
+                              onClick={() => setIsCalendarOpen(true)}
+                              variant="contained"
+                              sx={{
+                                textTransform: 'none',
+                                bgcolor: 'rgba(0,0,0,0.04)',
+                                color: 'text.primary',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                minWidth: 'auto',
+                                px: 2,
+                                py: 0.5,
+                                '&:hover': {
+                                  bgcolor: 'rgba(0,0,0,0.08)',
+                                  boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                                },
+                              }}
+                            >
+                              {format(selectedDate, 'MMM d') === format(new Date(), 'MMM d') 
+                                ? 'Today'
+                                : format(selectedDate, 'MMM d')}
+                            </Button>
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, ml: 1 }}>
+                            {formatDate(selectedDate)}
+                          </Typography>
+                        </Box>
                       </Box>
+                      {availableCarsSection}
                     </Box>
-                    {availableCarsSection}
-                  </Box>
-                )}
-              </Box>
-            </FloatingSection>
-
-            <Box
-              sx={{
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backdropFilter: 'blur(8px)',
-                  zIndex: 1,
-                  pointerEvents: 'none',
-                  opacity: 0,
-                  transition: 'opacity 0.3s',
-                },
-                '&:hover::before': {
-                  opacity: 0.1, // Subtle blur effect on hover
-                },
-              }}
-            >
-              {/* Bookings Section */}
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <CircularProgress size={40} />
+                  )}
                 </Box>
-              ) : error ? (
-                <Paper sx={{ p: 3, bgcolor: '#FFE5E5', color: '#FF3B30', borderRadius: 2 }}>
-                  <Typography>{error}</Typography>
-                </Paper>
-              ) : (
-                <Stack spacing={4} sx={{ 
-                  width: '100%',
-                  maxWidth: { xs: '100%', lg: '1200px' },
-                  mx: 'auto',
-                  position: 'relative',
-                  zIndex: 0,
-                }}>
-                  {groupBookingsByDate(filterBookings(bookings)).map(([date, dateBookings]) => (
+              </FloatingSection>
+            </Suspense>
+
+            {/* Bookings Section */}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={40} />
+              </Box>
+            ) : error ? (
+              <Paper sx={{ p: 3, bgcolor: '#FFE5E5', color: '#FF3B30', borderRadius: 2 }}>
+                <Typography>{error}</Typography>
+              </Paper>
+            ) : (
+              <Suspense fallback={null}>
+                <Stack spacing={4}>
+                  {groupedBookings.map(([date, dateBookings]) => (
                     <Box key={date}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
                           mb: 2,
-                          px: 2,
-                          py: 1,
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          borderRadius: 1,
-                          display: 'inline-block'
+                          fontSize: '1rem',  // Increased from default
+                          fontWeight: 600,
+                          color: 'text.secondary',
                         }}
                       >
                         {formatDate(new Date(date))}
                       </Typography>
-                      
                       <Stack spacing={2}>
                         {dateBookings.map((booking) => (
-                          <Card 
+                          <BookingCard
                             key={booking.id}
-                            sx={{ 
-                              cursor: 'pointer',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              '&:hover': { 
-                                transform: { xs: 'none', sm: 'translateY(-4px) scale(1.02)' },
-                                boxShadow: '0 12px 40px rgba(0,0,0,0.12)'
-                              },
-                              bgcolor: isExpired(booking.returnDate) 
-                                ? '#eeeeee'
-                                : carColors[booking.carPlate] || '#FFFFFF',
-                              width: '100%',
-                              maxWidth: 'none',
-                              mx: 'auto',
-                              position: 'relative',
-                              pl: { xs: 4.5, sm: 6, md: 8 },
-                              ml: { xs: 2, sm: 4, md: 5 },
-                              borderRadius: '16px',
-                              overflow: 'hidden',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: '4px',
-                                background: 'linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.8))',
-                                opacity: 0.5,
-                              },
-                            }}
-                            onClick={() => handleCardClick(booking.rentID)}
-                          >
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                left: { xs: 12, sm: 16 },
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                width: { xs: 32, sm: 40 },
-                                height: { xs: 32, sm: 40 },
-                                borderRadius: '50%',
-                                bgcolor: 'white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                border: '2px solid',
-                                borderColor: isExpired(booking.returnDate) 
-                                  ? '#bdbdbd'
-                                  : carColors[booking.carPlate]?.replace('22', '44') || '#e0e0e0',
-                                color: isExpired(booking.returnDate)
-                                  ? '#9e9e9e'
-                                  : '#757575',
-                                fontWeight: 'bold',
-                                fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                                fontFamily: theme.typography.fontFamily,
-                                zIndex: 1,
-                              }}
-                            >
-                              {booking.rentID}
-                            </Box>
-
-                            <CardContent sx={{ py: { xs: 2, sm: 2 } }}>
-                              <Box sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                ml: { xs: 0.5, sm: 1 }
-                              }}>
-                                <Box>
-                                  <Typography 
-                                    variant="h5" 
-                                    sx={{ 
-                                      fontWeight: 'bold',
-                                      fontSize: { xs: '0.85rem', sm: '0.85rem' },
-                                      mb: 1,
-                                      lineHeight: { xs: 1.3, sm: 1.5 }
-                                    }}
-                                  >
-                                    {`${booking.rentDate}~${booking.returnDate}`}
-                                  </Typography>
-                                  <Typography 
-                                    variant="body1" 
-                                    sx={{ 
-                                      color: 'text.secondary',
-                                      fontSize: { xs: '0.8rem', sm: '0.8rem' }
-                                    }}
-                                  >
-                                    {booking.carPlate}
-                                    {booking.carLocation && ` (${booking.carLocation})`}
-                                  </Typography>
-                                </Box>
-                                <IconButton 
-                                  sx={{ 
-                                    transform: expandedId === booking.rentID ? 'rotate(180deg)' : 'rotate(0deg)',
-                                    transition: 'transform 0.2s'
-                                  }}
-                                >
-                                  <ExpandMoreIcon />
-                                </IconButton>
-                              </Box>
-
-                              <Fade in={expandedId === booking.rentID}>
-                                <Box sx={{ 
-                                  mt: 2, 
-                                  pt: 2, 
-                                  borderTop: '1px solid',
-                                  borderColor: 'divider',
-                                  display: expandedId === booking.rentID ? 'block' : 'none'
-                                }}>
-                                  <Typography variant="body2" sx={{ mb: 1 }}>
-                                    <strong>預約者姓名:</strong> {booking.person}
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ mb: 1 }}>
-                                    <strong>預計出差地點:</strong> {booking.destination}
-                                  </Typography>
-                                  {booking.info && (
-                                    <Typography variant="body2">
-                                      <strong>備注:</strong> {booking.info}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </Fade>
-                            </CardContent>
-                          </Card>
+                            booking={booking}
+                            expandedId={expandedId}
+                            handleCardClick={handleCardClick}
+                            isExpired={isExpired}
+                            carColors={carColors}
+                            theme={theme}
+                          />
                         ))}
                       </Stack>
                     </Box>
                   ))}
                 </Stack>
-              )}
-            </Box>
+              </Suspense>
+            )}
           </Stack>
         </Container>
       </Box>
       {selectedCar && (
-        <CarBookingCalendar
-          carPlate={selectedCar}
-          bookings={bookings}
-          onClose={() => setSelectedCar(null)}
-        />
+        <Suspense fallback={null}>
+          <CarBookingCalendar
+            carPlate={selectedCar}
+            bookings={bookings}
+            onClose={() => setSelectedCar(null)}
+            hideExpired={hideExpired}
+          />
+        </Suspense>
       )}
     </ThemeProvider>
   );
