@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const SHEET_ID = process.env.VITE_GOOGLE_SHEET_ID;
-const API_KEY = process.env.VITE_GOOGLE_API_KEY;
+const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const RANGE = '公務車預約使用表!A5:H';
 
 const SHEETS_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values`;
