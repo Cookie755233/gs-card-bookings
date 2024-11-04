@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "rentDate": "2024/08/15 (週四)",
+    "returnDate": "2024/08/15 (週四)",
+    "location": "屏東外辦",
+    "carNumber": "RFC-3623",
+    "renterName": "云淇",
+    "destination": "臺南新營"
+  },
+  {
+    "id": "2",
+    "rentDate": "2024/08/16 (週五)",
+    "returnDate": "2024/08/16 (週五)",
+    "location": "高雄總部",
+    "carNumber": "ABC-1234",
+    "renterName": "測試",
+    "destination": "高雄市區"
+  }
+] 
