@@ -27,6 +27,7 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
+  const [pendingSubmission, setPendingSubmission] = useState(null);
   const [formData, setFormData] = useState({
     rentDate: null,
     returnDate: null,
@@ -36,7 +37,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
     destination: '',
     info: ''
   });
-  const [pendingSubmission, setPendingSubmission] = useState(null);
 
   useEffect(() => {
     if (prefilledData) {
@@ -88,7 +88,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
       setPassword('');
       setPasswordError('');
       
-      // Execute the pending submission
       if (pendingSubmission) {
         try {
           await onAddBooking(pendingSubmission);
@@ -148,7 +147,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
       const newData = { ...prev, [field]: newValue };
       setError('');
       
-      // Only check availability if we have all required data
       if (newData.carPlate && newData.rentDate && newData.returnDate) {
         if (!isCarAvailable(newData.carPlate, newData.rentDate, newData.returnDate)) {
           setError(`Car ${newData.carPlate} is not available for the selected dates`);
@@ -165,7 +163,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
       const newData = { ...prev, carPlate: newCarPlate };
       setError('');
       
-      // Check availability if we have all required data
       if (newData.rentDate && newData.returnDate) {
         if (!isCarAvailable(newCarPlate, newData.rentDate, newData.returnDate)) {
           setError(`Car ${newCarPlate} is not available for the selected dates`);

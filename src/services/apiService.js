@@ -9,8 +9,11 @@ const RANGE = '公務車預約使用表!A5:H';
 const SHEETS_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values`;
 
 let tokenClient;
+let tokenInitialized = false;
 
 const initializeGoogleAuth = () => {
+  if (tokenInitialized) return Promise.resolve();
+
   return new Promise((resolve) => {
     const initializeGsi = () => {
       tokenClient = google.accounts.oauth2.initTokenClient({
@@ -23,6 +26,7 @@ const initializeGoogleAuth = () => {
           resolve(response.access_token);
         },
       });
+      tokenInitialized = true;
     };
 
     if (window.google) {
@@ -36,23 +40,22 @@ const initializeGoogleAuth = () => {
   });
 };
 
+// Initialize auth when the module loads
+initializeGoogleAuth();
+
 const getAccessToken = async () => {
-  if (!tokenClient) {
+  if (!tokenInitialized) {
     await initializeGoogleAuth();
   }
+
   return new Promise((resolve) => {
-    try {
-      tokenClient.callback = (response) => {
-        if (response.error !== undefined) {
-          throw response;
-        }
-        resolve(response.access_token);
-      };
-      tokenClient.requestAccessToken({ prompt: '' });
-    } catch (err) {
-      console.error('Error getting access token:', err);
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    }
+    tokenClient.callback = (response) => {
+      if (response.error !== undefined) {
+        throw response;
+      }
+      resolve(response.access_token);
+    };
+    tokenClient.requestAccessToken({ prompt: 'consent' });
   });
 };
 
@@ -104,9 +107,10 @@ export const apiService = {
 
   createBooking: async (bookingData) => {
     try {
+      // Get the access token first - this will now trigger the prompt immediately
       const token = await getAccessToken();
 
-      // Get current bookings to find the next row
+      // Then proceed with the rest of the booking creation
       const response = await axios.get(
         `${SHEETS_API_URL}/公務車預約使用表!A5:C`,
         {
@@ -190,16 +194,7 @@ export const apiService = {
         row: nextRow
       };
     } catch (error) {
-      // Detailed error logging
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Error status:', error.response.status);
-        console.error('Error headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
+      console.error('Error in createBooking:', error);
       throw error;
     }
   },

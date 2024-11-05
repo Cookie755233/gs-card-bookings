@@ -188,6 +188,11 @@ function App() {
   const [allBookingsLoaded, setAllBookingsLoaded] = useState(false);
   const [addBookingData, setAddBookingData] = useState(null);
 
+  useEffect(() => {
+    // Initialize Google auth when app loads
+    apiService.getAllBookings().catch(console.error);
+  }, []);
+
   const fetchBookings = async (shouldHideExpired) => {
     try {
       setInitialLoading(true);
@@ -395,54 +400,28 @@ function App() {
   };
 
   const availableCarsSection = (
-    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+    <Box className="availableCarsGrid">
       {availableCars.map(carPlate => (
         <Paper
           key={carPlate}
           onClick={() => handleCarClick(carPlate)}
+          className="carCard"
           sx={{
-            p: 1,
             bgcolor: carColors[carPlate] || '#F5F5F5',
-            borderRadius: 1,
-            width: '120px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'transform 0.2s',
-            '&:hover': {
-              transform: 'scale(1.05)',
-            },
           }}
         >
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              letterSpacing: '0.5px'
-            }}
-          >
+          <Typography className="plateNumber">
             {carPlate}
           </Typography>
           {carInfo[carPlate] && (
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                display: 'block',
-                fontSize: '0.7rem',
-                color: 'text.secondary',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                mt: 0.5,
-                opacity: 0.8
-              }}
-            >
+            <Typography className="carInfo">
               {carInfo[carPlate]}
             </Typography>
           )}
         </Paper>
       ))}
       {availableCars.length === 0 && (
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', gridColumn: '1 / -1' }}>
           No cars available on this date
         </Typography>
       )}
@@ -512,7 +491,7 @@ function App() {
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   mb: isScrolled ? 0 : 3
-                }}>
+                }} className="headerSection">
                   <Typography 
                     variant="h4" 
                     sx={{ 
