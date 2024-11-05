@@ -182,59 +182,56 @@ function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
   const [allBookings, setAllBookings] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [allBookingsLoaded, setAllBookingsLoaded] = useState(false);
 
-  // Update fetchBookings to store all bookings
   const fetchBookings = async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
       const data = await apiService.getAllBookings();
-      setAllBookings(data); // Store all bookings
       
-      // Only filter for initial display if hideExpired is true
-      if (hideExpired) {
-        const compareDate = new Date(selectedDate);
-        compareDate.setHours(0, 0, 0, 0);
-        
-        const filteredData = data.filter(booking => {
-          const returnDate = new Date(booking.returnDate);
-          returnDate.setHours(0, 0, 0, 0);
-          return returnDate >= compareDate;
-        });
-        
-        setBookings(filteredData);
-      } else {
-        setBookings(data);
-      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const currentBookings = data.filter(booking => {
+        const returnDate = new Date(booking.returnDate);
+        returnDate.setHours(0, 0, 0, 0);
+        return returnDate >= today;
+      });
+      
+      setBookings(currentBookings);
+      setAllBookings(data);
+      setAllBookingsLoaded(true);
     } catch (err) {
       setError('Failed to fetch bookings');
       console.error(err);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
-  // Update the effect to handle hideExpired changes
   useEffect(() => {
+    if (!allBookingsLoaded) return;
+    
     if (hideExpired) {
-      const compareDate = new Date(selectedDate);
-      compareDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       
-      const filteredData = allBookings.filter(booking => {
+      const filteredBookings = allBookings.filter(booking => {
         const returnDate = new Date(booking.returnDate);
         returnDate.setHours(0, 0, 0, 0);
-        return returnDate >= compareDate;
+        return returnDate >= today;
       });
       
-      setBookings(filteredData);
+      setBookings(filteredBookings);
     } else {
       setBookings(allBookings);
     }
-  }, [hideExpired, allBookings, selectedDate]);
+  }, [hideExpired, allBookingsLoaded, allBookings]);
 
-  // Initial fetch
   useEffect(() => {
     fetchBookings();
-  }, []); // Only fetch once on mount
+  }, []);
 
   const calculateAvailableCars = useCallback(() => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -261,7 +258,6 @@ function App() {
     calculateAvailableCars();
   }, [selectedDate, bookings]);
 
-  // Optimize scroll event listener
   useEffect(() => {
     let ticking = false;
     let timeout;
@@ -275,10 +271,8 @@ function App() {
         ticking = true;
       }
       
-      // Clear the existing timeout
       if (timeout) clearTimeout(timeout);
       
-      // Set a new timeout to snap after scrolling stops
       timeout = setTimeout(() => {
         const cards = document.querySelectorAll('[data-booking-card]');
         let closestCard = null;
@@ -288,7 +282,6 @@ function App() {
           const rect = card.getBoundingClientRect();
           const distance = Math.abs(rect.top);
           
-          // Find the card closest to the top of the viewport
           if (distance < minDistance) {
             minDistance = distance;
             closestCard = card;
@@ -301,7 +294,7 @@ function App() {
             block: 'nearest',
           });
         }
-      }, 100); // Adjust this delay as needed
+      }, 100);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -311,7 +304,6 @@ function App() {
     };
   }, []);
 
-  // Memoize grouped bookings
   const groupedBookings = useMemo(() => {
     const grouped = {};
     bookings.forEach(booking => {
@@ -556,7 +548,7 @@ function App() {
             </Suspense>
 
             {/* Bookings Section */}
-            {loading ? (
+            {initialLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <CircularProgress size={40} />
               </Box>

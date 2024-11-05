@@ -99,7 +99,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
               onClick={handleDotClick}
               sx={{
                 cursor: 'pointer',
-                fontSize: '50px',
+                fontSize: '30px',
                 color: carColors[carPlate],
                 '&:hover': {
                   transform: 'scale(1)',
@@ -115,7 +115,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
           '& .MuiBadge-badge': {
             backgroundColor: 'transparent',
             right: '50%',
-            top: '30%',
+            top: '50%',
             transform: 'translate(50%, -50%)',
             pointerEvents: 'auto',
           }
@@ -173,7 +173,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
           <Typography 
             variant="h6" 
             sx={{ 
-              fontSize: '1.4rem',
+              fontSize: { xs: '1.1rem', sm: '1.2rem' },
               fontWeight: 'bold',
             }}
           >
@@ -269,9 +269,15 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 px: 2,
-                py: 1,
+                py: 1.5,
+                borderBottom: '1px solid rgba(0,0,0,0.08)',
+                bgcolor: 'rgba(0,0,0,0.02)',
               }}>
-                <Typography sx={{ fontSize: '1.1rem', fontWeight: 500 }}>
+                <Typography sx={{ 
+                  fontSize: '1.1rem', 
+                  fontWeight: 500,
+                  color: 'text.primary' 
+                }}>
                   {format(date, 'MMMM yyyy')}
                 </Typography>
                 <Button
@@ -289,6 +295,10 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
                     },
                     minWidth: 'auto',
                     px: 2,
+                    py: 0.5,
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
                   }}
                 >
                   Today
@@ -301,9 +311,8 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
               mx: 'auto',
               bgcolor: 'background.paper',
               borderRadius: 2,
-              '& .MuiPickersCalendarHeader-label': {
-                fontSize: '1rem',
-                fontWeight: 500,
+              '& .MuiPickersCalendarHeader-root': {
+                display: 'none',
               },
             }}
             readOnly
@@ -320,7 +329,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
               bottom: 16,
               left: 16,
               color: 'text.secondary',
-              fontSize: '0.75rem',
+              fontSize: '0.5rem',
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
@@ -352,7 +361,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
               bgcolor: 'white',
               borderRadius: '16px',
               p: 0,
-              willChange: 'transform, opacity', // Improves performance
+              willChange: 'transform, opacity',
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -375,14 +384,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
                     fontSize: '1.2rem',
                   }}
                 >
-                  Bookings for{' '}
-                  <span style={{ 
-                    color: removeColorTransparency(carColors[carPlate]),
-                    fontWeight: 'bold' 
-                  }}>
-                    {carPlate}
-                  </span>
-                  {' '}on {format(selectedDate, 'MMM d, yyyy')}
+                  Bookings for {carPlate} on {format(selectedDate, 'MMM d, yyyy')}
                 </Typography>
               )}
               <Stack spacing={1.5}>

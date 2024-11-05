@@ -14,30 +14,29 @@ export const apiService = {
           key: API_KEY,
           valueRenderOption: 'FORMATTED_VALUE',
           dateTimeRenderOption: 'FORMATTED_STRING',
+          fields: 'values',
         },
       });
 
-      // Transform the response data into our booking format
       const rows = response.data.values || [];
-      return rows
-        .filter(row =>
-          // Filter out empty rows or rows without essential data
-          row.length >= 7 &&
-          row[2] && // rentDate
-          row[3] && // returnDate
-          row[5]    // carPlate
-        )
-        .map((row, index) => ({
-          id: index.toString(),
-          rentID: row[0],
-          rentDate: row[1],
-          returnDate: row[2],
-          carLocation: row[3],
-          carPlate: row[4],
-          person: row[5],
-          destination: row[6] || '',
-          info: row[7] || ''
-        }));
+
+      return rows.reduce((acc, row) => {
+        if (row.length >= 7 && row[2] && row[3] && row[5]) {
+          acc.push({
+            id: acc.length.toString(),
+            rentID: row[0],
+            rentDate: row[1],
+            returnDate: row[2],
+            carLocation: row[3],
+            carPlate: row[4],
+            person: row[5],
+            destination: row[6] || '',
+            info: row[7] || ''
+          });
+        }
+        return acc;
+      }, []);
+
     } catch (error) {
       console.error('Error fetching bookings:', error);
       throw error;
