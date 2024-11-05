@@ -133,7 +133,7 @@ const BookingCard = memo(({ booking, expandedId, handleCardClick, isExpired, car
             }}
           >
             {booking.carPlate}
-            {booking.carLocation && ` (${booking.carLocation})`}
+            {carInfo[booking.carPlate] && ` (${carInfo[booking.carPlate]})`}
           </Typography>
         </Box>
         <IconButton 
