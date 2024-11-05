@@ -58,9 +58,13 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
 
     const isBooked = dayBookings.length > 0;
     const currentDate = new Date();
-    const isToday = day.getDate() === currentDate.getDate() &&
-                    day.getMonth() === currentDate.getMonth() &&
-                    day.getFullYear() === currentDate.getFullYear();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    const checkDate = new Date(day);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const isToday = checkDate.getTime() === currentDate.getTime();
+    const isPast = checkDate < currentDate;
 
     return (
       <Badge
@@ -84,6 +88,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
                   transform: 'scale(1)',
                 },
                 transition: 'transform 0.2s ease',
+                opacity: 1,
               }}
             >
               ●
@@ -102,7 +107,10 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
       >
         <Box
           onClick={() => {
-            if (!isBooked && !outsideCurrentMonth) {
+            if (isBooked) {
+              setSelectedBookings(dayBookings);
+              setSelectedDate(day);
+            } else if (!isBooked && !outsideCurrentMonth && !isPast && !isToday) {
               onClose();
               onAddBooking({ carPlate, rentDate: day });
             }
@@ -118,10 +126,12 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
             fontWeight: isToday ? 'bold' : 'normal',
             borderRadius: '50%',
             bgcolor: isToday ? '#007AFF' : 'transparent',
-            color: isToday ? 'white' : 'inherit',
-            cursor: !isBooked && !outsideCurrentMonth ? 'pointer' : 'default',
+            color: isToday ? 'white' : isPast ? '#9e9e9e' : 'inherit',
+            cursor: (isBooked || (!isBooked && !outsideCurrentMonth && !isPast && !isToday)) ? 'pointer' : 'default',
             '&:hover': {
-              bgcolor: !isBooked && !outsideCurrentMonth ? 'rgba(0,0,0,0.04)' : undefined,
+              bgcolor: (isBooked || (!isBooked && !outsideCurrentMonth && !isPast && !isToday)) 
+                ? 'rgba(0,0,0,0.04)' 
+                : undefined,
             },
           }}
         >
@@ -210,6 +220,22 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
               day: {
                 outsideCurrentMonth: true,
               },
+              previousIconButton: {
+                sx: { 
+                  color: 'action.active',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  }
+                }
+              },
+              nextIconButton: {
+                sx: { 
+                  color: 'action.active',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  }
+                }
+              }
             }}
             sx={{
               width: '100%',
@@ -217,6 +243,17 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
               mx: 'auto',
               bgcolor: 'background.paper',
               borderRadius: 2,
+              '& .MuiPickersCalendarHeader-root': {
+                '& .MuiIconButton-root': {
+                  color: 'action.active',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  },
+                  '&.Mui-disabled': {
+                    display: 'none',
+                  }
+                }
+              }
             }}
           />
         </LocalizationProvider>

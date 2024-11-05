@@ -15,7 +15,9 @@ import AddIcon from '@mui/icons-material/Add';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { isAfter, isBefore, isEqual, parseISO } from 'date-fns';
+import { isAfter, isBefore, isEqual } from 'date-fns';
+
+const ADMIN_PASSWORD = '24031247';
 
 const locations = [
   "屏東外辦",
@@ -43,6 +45,9 @@ const carPlates = [
 
 const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataUsed }) => {
   const [open, setOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     rentDate: null,
@@ -53,6 +58,7 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
     destination: '',
     info: ''
   });
+  const [pendingSubmission, setPendingSubmission] = useState(null);
 
   useEffect(() => {
     if (prefilledData) {
@@ -73,14 +79,12 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
 
   const isCarAvailable = (carPlate, startDate, endDate) => {
     if (!startDate || !endDate || !carPlate) return true;
-
-    // Convert dates to comparable format
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
-    // Check for overlapping bookings
     const conflictingBooking = bookings.find(booking => {
       const bookingStart = new Date(booking.rentDate);
       const bookingEnd = new Date(booking.returnDate);
@@ -90,7 +94,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
       return (
         booking.carPlate === carPlate &&
         (
-          // Check if the new booking overlaps with existing booking
           (start <= bookingEnd && end >= bookingStart) ||
           (start >= bookingStart && start <= bookingEnd) ||
           (end >= bookingStart && end <= bookingEnd)
@@ -99,6 +102,37 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
     });
 
     return !conflictingBooking;
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (password === ADMIN_PASSWORD) {
+      setPasswordDialogOpen(false);
+      setPassword('');
+      setPasswordError('');
+      
+      // Execute the pending submission
+      if (pendingSubmission) {
+        try {
+          await onAddBooking(pendingSubmission);
+          setOpen(false);
+          setFormData({
+            rentDate: null,
+            returnDate: null,
+            carLocation: '',
+            carPlate: '',
+            person: '',
+            destination: '',
+            info: ''
+          });
+          setPendingSubmission(null);
+        } catch (error) {
+          setError('Failed to add booking. Please try again.');
+          console.error(error);
+        }
+      }
+    } else {
+      setPasswordError('Incorrect password');
+    }
   };
 
   const handleSubmit = async () => {
@@ -120,26 +154,14 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
       return;
     }
 
-    try {
-      await onAddBooking({
-        ...formData,
-        rentDate: formData.rentDate.toISOString().split('T')[0],
-        returnDate: formData.returnDate.toISOString().split('T')[0]
-      });
-      setOpen(false);
-      setFormData({
-        rentDate: null,
-        returnDate: null,
-        carLocation: '',
-        carPlate: '',
-        person: '',
-        destination: '',
-        info: ''
-      });
-    } catch (error) {
-      setError('Failed to add booking. Please try again.');
-      console.error(error);
-    }
+    const submissionData = {
+      ...formData,
+      rentDate: formData.rentDate.toISOString().split('T')[0],
+      returnDate: formData.returnDate.toISOString().split('T')[0]
+    };
+
+    setPendingSubmission(submissionData);
+    setPasswordDialogOpen(true);
   };
 
   // Check availability when dates or car changes
@@ -294,6 +316,57 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
             disabled={Boolean(error)}
           >
             Add Booking
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Password Confirmation Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onClose={() => {
+          setPasswordDialogOpen(false);
+          setPassword('');
+          setPasswordError('');
+        }}
+      >
+        <DialogTitle>Enter Admin Password</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            {passwordError && (
+              <Alert severity="error">
+                {passwordError}
+              </Alert>
+            )}
+            <TextField
+              autoFocus
+              label="Password"
+              type="password"
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handlePasswordSubmit();
+                }
+              }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setPasswordDialogOpen(false);
+              setPassword('');
+              setPasswordError('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handlePasswordSubmit}
+            variant="contained"
+          >
+            Submit
           </Button>
         </DialogActions>
       </Dialog>
