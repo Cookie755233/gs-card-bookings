@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import Badge from '@mui/material/Badge';
 import { theme, carColors } from './theme/theme';
+import AddBookingFab from './components/AddBookingFab';
 
 const formatDate = (date) => {
   return new Intl.DateTimeFormat('en-US', {
@@ -305,8 +306,18 @@ function App() {
   }, []);
 
   const groupedBookings = useMemo(() => {
+    const filteredBookings = bookings.filter(booking => {
+      const bookingDate = new Date(booking.rentDate);
+      const compareDate = new Date(selectedDate);
+      
+      bookingDate.setHours(0, 0, 0, 0);
+      compareDate.setHours(0, 0, 0, 0);
+      
+      return bookingDate >= compareDate;
+    });
+
     const grouped = {};
-    bookings.forEach(booking => {
+    filteredBookings.forEach(booking => {
       const rentDate = booking.rentDate;
       if (!grouped[rentDate]) {
         grouped[rentDate] = [];
@@ -314,7 +325,7 @@ function App() {
       grouped[rentDate].push(booking);
     });
     return Object.entries(grouped).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-  }, [bookings]);
+  }, [bookings, selectedDate]);
 
   const handleAddBooking = async (newBooking) => {
     try {
@@ -603,6 +614,10 @@ function App() {
           />
         </Suspense>
       )}
+      <AddBookingFab 
+        onAddBooking={handleAddBooking} 
+        bookings={bookings}
+      />
     </ThemeProvider>
   );
 }
