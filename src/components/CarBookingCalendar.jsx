@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { carColors } from '../theme/theme';
 import { useState, useEffect } from 'react';
 
-const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBooking }) => {
+const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBooking, carInfo }) => {
   const [selectedBookings, setSelectedBookings] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -176,37 +176,65 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
       >
         <Box sx={{ 
           display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+          flexDirection: 'column',
           mb: 2,
-          position: 'relative'
+          position: 'relative',
+          width: '100%',
         }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontSize: { xs: '1.1rem', sm: '1.2rem' },
-              fontWeight: 'bold',
-            }}
-          >
-            Bookings for {carPlate}
-          </Typography>
-          <Button 
-            onClick={onClose}
-            variant="contained"
-            sx={{ 
-              bgcolor: '#007AFF',
-              color: 'white',
-              boxShadow: '0 4px 12px rgba(0,122,255,0.2)',
-              '&:hover': {
-                bgcolor: '#0063CC',
-                boxShadow: '0 6px 16px rgba(0,122,255,0.3)',
-              },
-              textTransform: 'none',
-              px: 3,
-            }}
-          >
-            Close
-          </Button>
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            width: '100%',
+          }}>
+            <Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                  fontWeight: 'bold',
+                }}
+              >
+                Bookings for {carPlate}
+              </Typography>
+              {carInfo[carPlate] && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    mt: 0.5,
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                    letterSpacing: '0.3px',
+                    opacity: 0.85,
+                    background: 'linear-gradient(45deg, #666, #999)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  {carInfo[carPlate]}
+                </Typography>
+              )}
+            </Box>
+            <Button 
+              onClick={onClose}
+              variant="contained"
+              sx={{ 
+                bgcolor: '#007AFF',
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(0,122,255,0.2)',
+                '&:hover': {
+                  bgcolor: '#0063CC',
+                  boxShadow: '0 6px 16px rgba(0,122,255,0.3)',
+                },
+                textTransform: 'none',
+                px: 3,
+              }}
+            >
+              Close
+            </Button>
+          </Box>
         </Box>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <StaticDatePicker
@@ -267,7 +295,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
               bottom: 16,
               left: 16,
               color: 'text.secondary',
-              fontSize: '0.5rem',
+              fontSize: '0.6rem',
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,

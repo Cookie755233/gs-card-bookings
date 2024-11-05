@@ -9,39 +9,17 @@ import {
   TextField,
   MenuItem,
   Stack,
-  Alert
+  Alert,
+  Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { isAfter, isBefore, isEqual } from 'date-fns';
+import { locations, activeCars as carPlates, carInfo } from '../config/carConfig';
 
 const ADMIN_PASSWORD = '24031247';
-
-const locations = [
-  "屏東外辦",
-  "屏東綠辦",
-  "高雄辦",
-  "高雄漁電",
-  "台南辦",
-  "台東辦"
-];
-
-const carPlates = [
-  "BJK-0596",
-  "RFC-3623",
-  "RDJ-0550",
-  "RFJ-0812",
-  "BCL-7376",
-  "RBH-9726",
-  "BJH-9755",
-  "BNJ-0027",
-  "RDQ-2200",
-  "REA-2063",
-  "RFH-2963",
-  "RFJ-2180"
-];
 
 const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataUsed }) => {
   const [open, setOpen] = useState(false);
@@ -219,7 +197,39 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Add New Car Booking</DialogTitle>
+        <DialogTitle>
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: '20px', sm: '24px' },
+              background: 'linear-gradient(45deg, #007AFF, #5856D6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Add New Car Booking
+          </Typography>
+          {formData.carPlate && carInfo[formData.carPlate] && (
+            <Typography 
+              variant="caption" 
+              display="block" 
+              sx={{ 
+                mt: 0.5,
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                letterSpacing: '0.3px',
+                opacity: 0.85,
+                background: 'linear-gradient(45deg, #666, #999)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textTransform: 'uppercase'
+              }}
+            >
+              {carInfo[formData.carPlate]}
+            </Typography>
+          )}
+        </DialogTitle>
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Stack spacing={3} sx={{ mt: 2 }}>

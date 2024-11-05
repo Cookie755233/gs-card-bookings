@@ -27,6 +27,7 @@ import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import Badge from '@mui/material/Badge';
 import { theme, carColors } from './theme/theme';
 import AddBookingFab from './components/AddBookingFab';
+import { carInfo, activeCars } from './config/carConfig';
 
 const formatDate = (date) => {
   return new Intl.DateTimeFormat('en-US', {
@@ -226,7 +227,7 @@ function App() {
 
   const calculateAvailableCars = useCallback(() => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const allCarPlates = Object.keys(carColors);
+    const allCarPlates = activeCars;
     const checkDate = new Date(dateStr);
     checkDate.setHours(0, 0, 0, 0);
     
@@ -243,7 +244,7 @@ function App() {
     );
     
     setAvailableCars(allCarPlates.filter(car => !busyCarPlates.has(car)));
-  }, [selectedDate, bookings, carColors]);
+  }, [selectedDate, bookings]);
 
   useEffect(() => {
     calculateAvailableCars();
@@ -252,14 +253,22 @@ function App() {
   useEffect(() => {
     let ticking = false;
     let timeout;
+    let lastScrollY = window.scrollY;
+    const scrollThreshold = 30; // Reduced threshold for earlier response
     
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 100);
-          ticking = false;
-        });
-        ticking = true;
+      const currentScrollY = window.scrollY;
+      
+      // Start transition as soon as scrolling begins
+      if (Math.abs(currentScrollY - lastScrollY) > scrollThreshold) {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            setIsScrolled(currentScrollY > 20); // Reduced threshold to start earlier
+            ticking = false;
+            lastScrollY = currentScrollY;
+          });
+          ticking = true;
+        }
       }
       
       if (timeout) clearTimeout(timeout);
@@ -285,7 +294,7 @@ function App() {
             block: 'nearest',
           });
         }
-      }, 100);
+      }, 150);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -395,7 +404,7 @@ function App() {
             p: 1,
             bgcolor: carColors[carPlate] || '#F5F5F5',
             borderRadius: 1,
-            minWidth: '90px',
+            width: '120px',
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'transform 0.2s',
@@ -413,6 +422,23 @@ function App() {
           >
             {carPlate}
           </Typography>
+          {carInfo[carPlate] && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                display: 'block',
+                fontSize: '0.7rem',
+                color: 'text.secondary',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                mt: 0.5,
+                opacity: 0.8
+              }}
+            >
+              {carInfo[carPlate]}
+            </Typography>
+          )}
         </Paper>
       ))}
       {availableCars.length === 0 && (
@@ -625,6 +651,7 @@ function App() {
             onClose={() => setSelectedCar(null)}
             hideExpired={hideExpired}
             onAddBooking={handlePreFilledBooking}
+            carInfo={carInfo}
           />
         </Suspense>
       )}
