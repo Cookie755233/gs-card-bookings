@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Fab,
   Dialog,
@@ -41,7 +41,7 @@ const carPlates = [
   "RFJ-2180"
 ];
 
-const AddBookingFab = ({ onAddBooking, bookings }) => {
+const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataUsed }) => {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -53,6 +53,18 @@ const AddBookingFab = ({ onAddBooking, bookings }) => {
     destination: '',
     info: ''
   });
+
+  useEffect(() => {
+    if (prefilledData) {
+      setFormData(prev => ({
+        ...prev,
+        carPlate: prefilledData.carPlate,
+        rentDate: prefilledData.rentDate
+      }));
+      setOpen(true);
+      onPrefilledDataUsed();
+    }
+  }, [prefilledData]);
 
   const validateDates = (rentDate, returnDate) => {
     if (!rentDate || !returnDate) return true;

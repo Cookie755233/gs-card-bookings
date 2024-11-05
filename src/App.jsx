@@ -185,22 +185,31 @@ function App() {
   const [allBookings, setAllBookings] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [allBookingsLoaded, setAllBookingsLoaded] = useState(false);
+  const [addBookingData, setAddBookingData] = useState(null);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (shouldHideExpired) => {
     try {
       setInitialLoading(true);
       const data = await apiService.getAllBookings();
+      console.log('Fetched data:', data.length, 'bookings');
       
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      if (shouldHideExpired) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const filteredData = data.filter(booking => {
+          const returnDate = new Date(booking.returnDate);
+          returnDate.setHours(0, 0, 0, 0);
+          return returnDate >= today;
+        });
+        
+        console.log('Filtered data (hiding expired):', filteredData.length, 'bookings');
+        setBookings(filteredData);
+      } else {
+        console.log('Setting all data (showing expired):', data.length, 'bookings');
+        setBookings(data);
+      }
       
-      const currentBookings = data.filter(booking => {
-        const returnDate = new Date(booking.returnDate);
-        returnDate.setHours(0, 0, 0, 0);
-        return returnDate >= today;
-      });
-      
-      setBookings(currentBookings);
       setAllBookings(data);
       setAllBookingsLoaded(true);
     } catch (err) {
@@ -212,26 +221,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!allBookingsLoaded) return;
-    
-    if (hideExpired) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const filteredBookings = allBookings.filter(booking => {
-        const returnDate = new Date(booking.returnDate);
-        returnDate.setHours(0, 0, 0, 0);
-        return returnDate >= today;
-      });
-      
-      setBookings(filteredBookings);
-    } else {
-      setBookings(allBookings);
-    }
-  }, [hideExpired, allBookingsLoaded, allBookings]);
-
-  useEffect(() => {
-    fetchBookings();
+    fetchBookings(hideExpired);
   }, []);
 
   const calculateAvailableCars = useCallback(() => {
@@ -305,27 +295,48 @@ function App() {
     };
   }, []);
 
-  const groupedBookings = useMemo(() => {
-    const filteredBookings = bookings.filter(booking => {
-      const bookingDate = new Date(booking.rentDate);
-      const compareDate = new Date(selectedDate);
-      
-      bookingDate.setHours(0, 0, 0, 0);
-      compareDate.setHours(0, 0, 0, 0);
-      
-      return bookingDate >= compareDate;
-    });
+  const isExpired = (returnDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const bookingReturnDate = new Date(returnDate);
+    bookingReturnDate.setHours(0, 0, 0, 0);
+    
+    return bookingReturnDate < today;
+  };
 
+  const groupedBookings = useMemo(() => {
+    console.log('Grouping bookings, total:', bookings.length);
+    console.log('hideExpired is:', hideExpired);
+
+    // First group all bookings by date
     const grouped = {};
-    filteredBookings.forEach(booking => {
+    bookings.forEach(booking => {
       const rentDate = booking.rentDate;
       if (!grouped[rentDate]) {
         grouped[rentDate] = [];
       }
       grouped[rentDate].push(booking);
     });
-    return Object.entries(grouped).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-  }, [bookings, selectedDate]);
+
+    // Sort all dates
+    const sortedEntries = Object.entries(grouped)
+      .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+    // Only filter by selected date if we're hiding expired
+    if (hideExpired) {
+      const compareDate = new Date(selectedDate);
+      compareDate.setHours(0, 0, 0, 0);
+      
+      return sortedEntries.filter(([date]) => {
+        const bookingDate = new Date(date);
+        bookingDate.setHours(0, 0, 0, 0);
+        return bookingDate >= compareDate;
+      });
+    }
+
+    return sortedEntries;
+  }, [bookings, selectedDate, hideExpired]);
 
   const handleAddBooking = async (newBooking) => {
     try {
@@ -358,16 +369,6 @@ function App() {
 
   const handleCardClick = (rentID) => {
     setExpandedId(expandedId === rentID ? null : rentID);
-  };
-
-  const isExpired = (returnDate) => {
-    const compareDate = new Date(selectedDate);
-    compareDate.setHours(0, 0, 0, 0);
-    
-    const bookingReturnDate = new Date(returnDate);
-    bookingReturnDate.setHours(0, 0, 0, 0);
-    
-    return bookingReturnDate < compareDate;
   };
 
   const getBookingsForDate = (date) => {
@@ -421,6 +422,18 @@ function App() {
       )}
     </Box>
   );
+
+  const handleHideExpiredToggle = async (event) => {
+    const newHideExpired = event.target.checked;
+    console.log('Toggle switched to:', newHideExpired ? 'hide expired' : 'show all');
+    setHideExpired(newHideExpired);
+    await fetchBookings(newHideExpired);
+    console.log('Current bookings after toggle:', bookings.length);
+  };
+
+  const handlePreFilledBooking = ({ carPlate, rentDate }) => {
+    setAddBookingData({ carPlate, rentDate });
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -489,7 +502,7 @@ function App() {
                     control={
                       <Switch
                         checked={hideExpired}
-                        onChange={(e) => setHideExpired(e.target.checked)}
+                        onChange={handleHideExpiredToggle}
                         size="small"
                       />
                     }
@@ -611,12 +624,15 @@ function App() {
             bookings={bookings}
             onClose={() => setSelectedCar(null)}
             hideExpired={hideExpired}
+            onAddBooking={handlePreFilledBooking}
           />
         </Suspense>
       )}
       <AddBookingFab 
         onAddBooking={handleAddBooking} 
         bookings={bookings}
+        prefilledData={addBookingData}
+        onPrefilledDataUsed={() => setAddBookingData(null)}
       />
     </ThemeProvider>
   );

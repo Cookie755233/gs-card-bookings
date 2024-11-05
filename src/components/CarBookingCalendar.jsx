@@ -6,11 +6,18 @@ import { format } from 'date-fns';
 import { carColors } from '../theme/theme';
 import { useState, useEffect } from 'react';
 
-const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
+const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBooking }) => {
   const [selectedBookings, setSelectedBookings] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  
+  // Show calendar after mount
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+  }, []);
   
   // Filter bookings based on hideExpired
   const carBookings = bookings.filter(booking => {
@@ -25,36 +32,10 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
     return isForThisCar && returnDate >= today;
   });
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 0) {
-        setIsVisible(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const removeColorTransparency = (color) => {
-    return color.slice(0, -2);
-  };
-
   const renderDayWithBookings = (props) => {
     const {
       day,
       outsideCurrentMonth,
-      disableHighlightToday,
-      showDaysOutsideCurrentMonth,
-      isAnimating,
-      isFirstVisibleCell,
-      isLastVisibleCell,
-      selected,
-      today,
-      onDaySelect,
-      onClick,
-      onMouseEnter,
-      onFocus,
       ...other
     } = props;
 
@@ -81,14 +62,6 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
                     day.getMonth() === currentDate.getMonth() &&
                     day.getFullYear() === currentDate.getFullYear();
 
-    const handleDotClick = (e) => {
-      e.stopPropagation();
-      if (isBooked) {
-        setSelectedBookings(dayBookings);
-        setSelectedDate(day);
-      }
-    };
-
     return (
       <Badge
         key={day.toString()}
@@ -96,7 +69,13 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
         badgeContent={
           isBooked && !outsideCurrentMonth ? (
             <Box
-              onClick={handleDotClick}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isBooked) {
+                  setSelectedBookings(dayBookings);
+                  setSelectedDate(day);
+                }
+              }}
               sx={{
                 cursor: 'pointer',
                 fontSize: '30px',
@@ -122,6 +101,12 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
         }}
       >
         <Box
+          onClick={() => {
+            if (!isBooked && !outsideCurrentMonth) {
+              onClose();
+              onAddBooking({ carPlate, rentDate: day });
+            }
+          }}
           sx={{
             width: 36,
             height: 36,
@@ -134,8 +119,11 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
             borderRadius: '50%',
             bgcolor: isToday ? '#007AFF' : 'transparent',
             color: isToday ? 'white' : 'inherit',
+            cursor: !isBooked && !outsideCurrentMonth ? 'pointer' : 'default',
+            '&:hover': {
+              bgcolor: !isBooked && !outsideCurrentMonth ? 'rgba(0,0,0,0.04)' : undefined,
+            },
           }}
-          {...other}
         >
           {format(day, 'd')}
         </Box>
@@ -158,9 +146,22 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
           maxHeight: '80vh',
           overflowY: 'auto',
           transform: `translateY(${isVisible ? '0' : '100%'})`,
-          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           willChange: 'transform',
           visibility: isVisible ? 'visible' : 'hidden',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#E0E0E0',
+            borderRadius: '4px',
+            '&:hover': {
+              background: '#BDBDBD',
+            },
+          },
         }}
       >
         <Box sx={{ 
@@ -206,117 +207,17 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
             value={calendarDate}
             onChange={setCalendarDate}
             slotProps={{
-              actionBar: { actions: [] },
-              day: { 
-                selected: false,
-                disableHighlightToday: true
+              day: {
+                outsideCurrentMonth: true,
               },
-              toolbar: {
-                hidden: true
-              },
-              layout: {
-                sx: {
-                  '& .MuiPickersCalendarHeader-root': {
-                    paddingLeft: 2,
-                    paddingRight: 2,
-                    marginTop: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1,
-                    '& .MuiPickersArrowSwitcher-root': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                    },
-                    '& .MuiPickersCalendarHeader-label': {
-                      margin: 0,
-                      order: 2,
-                    },
-                    '& .MuiButtonBase-root': {
-                      order: 1,
-                    },
-                    '& .MuiPickersCalendarHeader-switchViewButton': {
-                      order: 3,
-                    }
-                  },
-                  '& .MuiDayCalendar-weekContainer': {
-                    margin: '8px 0',
-                  },
-                  '& .MuiPickersDay-root': {
-                    width: 36,
-                    height: 36,
-                    fontSize: '0.875rem',
-                    margin: '0 2px',
-                  },
-                }
-              }
             }}
-            componentsProps={{
-              leftArrowButton: {
-                sx: { order: 1 }
-              },
-              rightArrowButton: {
-                sx: { order: 3 }
-              },
-              switchViewButton: {
-                sx: { display: 'none' }
-              }
-            }}
-            ToolbarComponent={({ date, ...props }) => (
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                px: 2,
-                py: 1.5,
-                borderBottom: '1px solid rgba(0,0,0,0.08)',
-                bgcolor: 'rgba(0,0,0,0.02)',
-              }}>
-                <Typography sx={{ 
-                  fontSize: '1.1rem', 
-                  fontWeight: 500,
-                  color: 'text.primary' 
-                }}>
-                  {format(date, 'MMMM yyyy')}
-                </Typography>
-                <Button
-                  onClick={() => {
-                    const today = new Date();
-                    setCalendarDate(today);
-                  }}
-                  size="small"
-                  sx={{
-                    textTransform: 'none',
-                    bgcolor: 'rgba(0,122,255,0.1)',
-                    color: '#007AFF',
-                    '&:hover': {
-                      bgcolor: 'rgba(0,122,255,0.2)',
-                    },
-                    minWidth: 'auto',
-                    px: 2,
-                    py: 0.5,
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                  }}
-                >
-                  Today
-                </Button>
-              </Box>
-            )}
             sx={{
               width: '100%',
               maxWidth: '400px',
               mx: 'auto',
               bgcolor: 'background.paper',
               borderRadius: 2,
-              '& .MuiPickersCalendarHeader-root': {
-                display: 'none',
-              },
             }}
-            readOnly
-            disableHighlightToday
           />
         </LocalizationProvider>
 
@@ -345,7 +246,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
         )}
 
         {/* Selected bookings modal */}
-        <Fade in={selectedBookings !== null} timeout={{ enter: 200, exit: 150 }}>
+        <Fade in={selectedBookings !== null} timeout={{ enter: 300, exit: 200 }}>
           <Card
             sx={{
               position: 'fixed',
@@ -362,6 +263,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
               borderRadius: '16px',
               p: 0,
               willChange: 'transform, opacity',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // Smoother transition
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -371,6 +273,19 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired }) => {
                 height: '4px',
                 background: 'linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.8))',
                 opacity: 0.5,
+              },
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#E0E0E0',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: '#BDBDBD',
+                },
               },
             }}
           >
