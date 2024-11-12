@@ -17,7 +17,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { isAfter, isBefore, isEqual } from 'date-fns';
-import { locations, activeCars as carPlates, carInfo } from '../config/carConfig';
+import { activeCars as carPlates, carInfo, carLocation } from '../config/carConfig';
 
 const ADMIN_PASSWORD = '24031247';
 
@@ -38,12 +38,17 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
     info: ''
   });
 
+  // Get unique locations from carLocation object
+  const uniqueLocations = [...new Set(Object.values(carLocation))];
+
   useEffect(() => {
     if (prefilledData) {
       setFormData(prev => ({
         ...prev,
         carPlate: prefilledData.carPlate,
-        rentDate: prefilledData.rentDate
+        rentDate: prefilledData.rentDate,
+        // Still set carLocation in the background
+        carLocation: carLocation[prefilledData.carPlate] || ''
       }));
       setOpen(true);
       onPrefilledDataUsed();
@@ -141,7 +146,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
     setPasswordDialogOpen(true);
   };
 
-  // Check availability when dates or car changes
   const handleDateChange = (field) => (newValue) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: newValue };
@@ -160,7 +164,12 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
   const handleCarChange = (e) => {
     const newCarPlate = e.target.value;
     setFormData(prev => {
-      const newData = { ...prev, carPlate: newCarPlate };
+      const newData = { 
+        ...prev, 
+        carPlate: newCarPlate,
+        // Still update carLocation in the background
+        carLocation: carLocation[newCarPlate] || prev.carLocation
+      };
       setError('');
       
       if (newData.rentDate && newData.returnDate) {
@@ -263,20 +272,6 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
 
               <TextField
                 select
-                label="Car Location *"
-                value={formData.carLocation}
-                onChange={(e) => setFormData(prev => ({ ...prev, carLocation: e.target.value }))}
-                fullWidth
-              >
-                {locations.map((location) => (
-                  <MenuItem key={location} value={location}>
-                    {location}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
                 label="Car Plate *"
                 value={formData.carPlate}
                 onChange={handleCarChange}
@@ -285,7 +280,7 @@ const AddBookingFab = ({ onAddBooking, bookings, prefilledData, onPrefilledDataU
               >
                 {carPlates.map((plate) => (
                   <MenuItem key={plate} value={plate}>
-                    {plate}
+                    {plate} {carInfo[plate] && `(${carInfo[plate]} - ${carLocation[plate]})`}
                   </MenuItem>
                 ))}
               </TextField>

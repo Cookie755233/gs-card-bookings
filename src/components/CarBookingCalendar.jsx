@@ -3,7 +3,7 @@ import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
-import { carColors } from '../theme/theme';
+import { carColors } from '../config/carConfig';
 import { useState, useEffect } from 'react';
 
 const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBooking, carInfo }) => {
@@ -83,7 +83,7 @@ const CarBookingCalendar = ({ carPlate, bookings, onClose, hideExpired, onAddBoo
               sx={{
                 cursor: 'pointer',
                 fontSize: '30px',
-                color: carColors[carPlate],
+                color: carColors[carPlate] || '#FFFFFF',
                 '&:hover': {
                   transform: 'scale(1)',
                 },

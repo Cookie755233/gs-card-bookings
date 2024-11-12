@@ -1,11 +1,21 @@
 import { Paper, Box } from '@mui/material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const FloatingSection = ({ children, isScrolled, calendar }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleHeaderClick = () => {
+const FloatingSection = ({ children, isScrolled, calendar, isExpanded, setIsExpanded }) => {
+  useEffect(() => {
     if (isScrolled) {
+      setIsExpanded(false);
+    }
+  }, [isScrolled, setIsExpanded]);
+
+  const handleHeaderClick = (e) => {
+    if (isScrolled && 
+        (e.target.closest('.headerTitle') || 
+         (!e.target.closest('.regionDots') && 
+          !e.target.closest('#date-select-button') && 
+          !e.target.closest('.availableCarsGrid') &&
+          !e.target.closest('.switchesSection') &&
+          !e.target.closest('.switchControl')))) {
       setIsExpanded(!isExpanded);
     }
   };
@@ -66,55 +76,19 @@ const FloatingSection = ({ children, isScrolled, calendar }) => {
           maxHeight: isScrolled && !isExpanded ? '80px' : '1000px',
           overflow: 'hidden',
           willChange: 'max-height, transform',
-          cursor: isScrolled ? 'pointer' : 'default',
+          cursor: 'default',
           '&:hover': {
             transform: isScrolled ? 'translateY(-2px)' : 'none',
             boxShadow: isScrolled ? '0 12px 36px rgba(0, 0, 0, 0.12)' : '0 8px 32px rgba(0, 0, 0, 0.08)',
           },
-          '& .headerSection': {
+          '& .headerTitle': {
             cursor: isScrolled ? 'pointer' : 'default',
           },
           '& .hideWhenScrolled': {
             opacity: isScrolled && !isExpanded ? 0 : 1,
             visibility: isScrolled && !isExpanded ? 'hidden' : 'visible',
-            transition: 'opacity 0.3s ease, visibility 0.3s ease',
-            maxHeight: isScrolled && !isExpanded ? '0' : '1000px',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             overflow: 'hidden',
-          },
-          '& .availableCarsGrid': {
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(3, 1fr)',
-              sm: 'repeat(4, 1fr)',
-              md: 'repeat(5, 1fr)',
-            },
-            gap: { xs: 1, sm: 1.5 },
-            mt: 2,
-            '& .carCard': {
-              p: { xs: 1, sm: 1.5 },
-              borderRadius: 1,
-              width: '100%',
-              minWidth: 'unset',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'scale(1.05)',
-              },
-              '& .plateNumber': {
-                fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                letterSpacing: '0.5px',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              },
-              '& .carInfo': {
-                fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                mt: 0.5,
-                opacity: 0.8,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              },
-            },
           },
         }}
         onClick={handleHeaderClick}

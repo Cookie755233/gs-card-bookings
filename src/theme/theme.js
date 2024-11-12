@@ -50,19 +50,4 @@ export const theme = createTheme({
       },
     },
   },
-});
-
-export const carColors = {
-  'BJK-0596': '#b4ddf333',
-  'RFC-3623': '#b4ddf333',
-  'RDJ-0550': '#b4ddf333',
-  'RFJ-0812': '#b4ddf333',
-  'BCL-7376': '#ffc2e266',
-  'RBH-9726': '#ffc2e266',
-  'BJH-9755': '#ffe09b66',
-  'BNJ-0027': '#cce9b7ef',
-  'RDQ-2200': '#e4c9eedd',
-  'REA-2063': '#00674433',
-  'RFH-2963': '#ffc9c399',
-  'RFJ-2180': '#ffc9c399',
-}; 
+}); 
